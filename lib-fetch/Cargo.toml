@@ -4,23 +4,9 @@ version = "0.2.1"
 edition = "2021"
 author = "Satria Ady Pradana"
 
-[lib]
-name = "batara"
-path = "src/lib.rs"
-crate-type = ["cdylib", "lib"]
-
 [[bin]]
 name = "batara"
 path = "src/main.rs"
-
-[profile.release]
-opt-level = "s"
-lto = true 
-panic = "abort"
-strip = "symbols"
-test = false
-debug = false 
-debug-assertions = false 
 
 [dependencies]
 aes = "0.8.2"
@@ -28,31 +14,17 @@ base64 = "0.21"
 cbc = "0.1.2"
 cfg-if = "1.0"
 chrono = "0.4"
-ctor = "0.1.21"
-hmac = "0.11"
+ctor = "0.1.26"
+hmac = "0.12.1"
 litcrypt = "0.3"
+minreq = { git = "https://github.com/xathrya/minreq.git", features=["https-rustls-probe"] }
 path-clean = "1.0.1"
 rand = "0.8.5"
-rustls = "0.21.1"
+serde = { version = "1.0.163", features = ["derive"] }
 serde_json = "1.0.96"
-sha2 = "0.9.8"
-
-[dependencies.minreq]
-version = "2.7.0"
-features = ["https-rustls-probe"]
-
-[dependencies.serde]
-version = "1.0.160"
-features = ["derive"]
-
-#openssl = { version = "0.10.50", features = ["vendored"] }
-#ssh2 = { version = "0.9.4", features = ["vendored-openssl"] }
-#tokio = { version = "1.27.0", features = ["net", "rt-multi-thread", "io-util", "macros", "process"] }
-
-[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
-libc = "0.2.141"
-
-[target.'cfg(target_os = "windows")'.dependencies]
+sha2 = "0.10.8"
+tokio = { version = "1.28.2", features = ["net", "rt-multi-thread", "io-util", "macros", "process"] }
+libc = "0.2.152"
 clroxide = "1.1.1"
 goblin = "0.3"
 windows-acl = "0.1.0"
@@ -66,8 +38,12 @@ features = [
     "impl-default", 
     "memoryapi",
     "securitybaseapi", 
+    "sysinfoapi",
     "tlhelp32", 
     "winbase", 
     "wincon", 
     "wow64apiset"
 ]
+
+[build-dependencies]
+cc = "1.0.72"

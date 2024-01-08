@@ -1,9 +1,9 @@
 # docker build -t xathrya/rust-cross-compilers .
 
-FROM debian:12.2-slim AS builder 
+FROM python:3.12-slim-bookworm AS builder 
 
 ARG OSX_SDK_VERSION=13.3 
-ARG OSX_VERSION_MIN=10.14
+ARG OSX_VERSION_MIN=10.16
 ARG OSX_CROSS_COMMIT="ff8d100f3f026b4ffbe4ce96d8aac4ce06f1278b"
 ARG LLVM_MINGW_VERSION=20231114
 
@@ -19,7 +19,7 @@ RUN set -eux \
         autoconf automake build-essential ca-certificates clang cmake curl file git \
         libbz2-dev libgmp-dev libicu-dev libmpc-dev libmpfr-dev libpq-dev libsqlite3-dev \
         libssl-dev libtool libxml2-dev linux-libc-dev llvm-dev lzma-dev \
-        patch pkgconf python3 xutils-dev yasm xz-utils zlib1g-dev \
+        patch pkgconf xutils-dev yasm xz-utils zlib1g-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && true 
@@ -58,7 +58,7 @@ RUN set -eux \
     && echo "<build:osx:4> install dependencies..." \
     && apt-get update \
     && /usr/local/osxcross/tools/get_dependencies.sh \
-    && osxcross-macports install cctools zlib openssl libarchive \
+    && osxcross-macports -arm64 install cctools zlib openssl libarchive \
     && osxcross-macports upgrade \
     && true 
 
@@ -80,15 +80,15 @@ FROM python:3.12-slim-bookworm
 
 LABEL maintainer="Satria Ady Pradana <me@xathrya.id>" \
     architecture="amd64" \
-    python-version="3.12.0" \
+    python-version="3.12.1" \
     rustup-version="1.26.0" \
-    rustc-version="1.74.0" \
-    build="24-November-2023" \
+    rustc-version="1.75.0" \
+    build="05-January-2024" \
     org.opencontainers.image.title="Rust Cross Compiler" \
     org.opencontainers.image.description="Rust toolchains on Debian Slim" \
     org.opencontainers.image.authors="Satria Ady Pradana <me@xathrya.id>" \
     org.opencontainers.image.vendor="" \
-    org.opencontainers.image.version="1.74.0" \
+    org.opencontainers.image.version="1.75.0" \
     org.opencontainers.image.url="https://hub.docker.com/r/xathrya/mythic-rust-payload/" \
     org.opencontainers.image.source="https://github.com/xathrya/docker-images/" \
     org.opencontainers.image.revision=$VCS_REF \
@@ -99,7 +99,8 @@ ARG TOOLCHAIN=stable
 
 ENV CARGO_HOME="/usr/local/cargo"
 ENV RUSTUP_HOME="/usr/local/rustup"
-ENV OSXCROSS_PATH="/usr/local/osxcross"
+ENV OSXCROSS_PATH="/usr/local/osxcross/target"
+
 ENV LLVM_MINGW_PATH="/usr/local/llvm-mingw"
 ENV PATH="/root/.cargo/bin:${OSXCROSS_PATH}/bin:${LLVM_MINGW_PATH}/bin:${CARGO_HOME}/bin:${RUSTUP_HOME}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
@@ -108,10 +109,9 @@ RUN set -eux \
     && dpkg --add-architecture arm64 \
     && DEBIAN_FRONTEND=noninteractive apt-get -y update -qq \
     && DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends --no-install-suggests \
-        curl ca-certificates \
+        curl ca-certificates libxml2 \
         gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
         musl-dev musl-dev:arm64 musl-tools \
-        python3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && true
@@ -123,7 +123,7 @@ RUN set -eux \
 
 # install compilers
 ## OSX
-COPY --from=builder ${OSXCROSS_PATH}/target ${OSXCROSS_PATH}
+COPY --from=builder ${OSXCROSS_PATH} ${OSXCROSS_PATH}
 ## LLVM MinGW
 COPY --from=builder ${LLVM_MINGW_PATH} ${LLVM_MINGW_PATH}
 
@@ -145,6 +145,7 @@ RUN set -eux \
         aarch64-pc-windows-msvc \
         aarch64-unknown-linux-musl \
         i686-pc-windows-gnu \
+        i686-pc-windows-msvc \
         i686-unknown-linux-musl \
         x86_64-apple-darwin \
         x86_64-pc-windows-gnu \
@@ -153,7 +154,8 @@ RUN set -eux \
         x86_64-unknown-linux-musl \
     && cargo install cargo-xwin \
     && true 
-COPY ./cargo/config.toml /root/.cargo/config
+COPY ./cargo/config.toml /.cargo/config.toml
+COPY rcodesign /usr/local/bin/rcodesign
 
 WORKDIR /root/src 
 
