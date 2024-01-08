@@ -1,15 +1,15 @@
 # docker build -t xathrya/rust-cross-compilers .
 
-FROM python:3.12-slim-bookworm AS builder 
+FROM python:3.11-slim-bookworm AS builder 
 
-ARG OSX_SDK_VERSION=13.3 
-ARG OSX_VERSION_MIN=10.16
+ARG OSX_SDK_VERSION="13.3"
+ARG OSX_VERSION_MIN="10.16"
 ARG OSX_CROSS_COMMIT="ff8d100f3f026b4ffbe4ce96d8aac4ce06f1278b"
-ARG LLVM_MINGW_VERSION=20231114
+ARG LLVM_MINGW_VERSION="20231114"
 
-ENV PATH=/root/.cargo/bin:/usr/local/musl/bin:/usr/local/osxcross/target/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ENV MACOSX_DEPLOYMENT_TARGET=${OSX_VERSION_MIN}
-ENV OSXCROSS_MACPORTS_MIRROR=https://packages.macports.org
+ENV PATH="/root/.cargo/bin:/usr/local/musl/bin:/usr/local/osxcross/target/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ENV MACOSX_DEPLOYMENT_TARGET="${OSX_VERSION_MIN}"
+ENV OSXCROSS_MACPORTS_MIRROR="https://packages.macports.org"
 
 # setup dev tools for building C libraries
 RUN set -eux \
@@ -76,11 +76,11 @@ COPY "libs/i686-pc-windows-gnu/10-win32/libgcc*" /usr/local/llvm-mingw/i686-w64-
 
 # ================= IMAGE BUILDING =================
 
-FROM python:3.12-slim-bookworm 
+FROM python:3.11-slim-bookworm 
 
 LABEL maintainer="Satria Ady Pradana <me@xathrya.id>" \
     architecture="amd64" \
-    python-version="3.12.1" \
+    python-version="3.11" \
     rustup-version="1.26.0" \
     rustc-version="1.75.0" \
     build="05-January-2024" \
@@ -94,8 +94,8 @@ LABEL maintainer="Satria Ady Pradana <me@xathrya.id>" \
     org.opencontainers.image.revision=$VCS_REF \
     org.opencontainers.image.created=$BUILD_DATE
 
-ARG SCCACHE_VERSION=0.7.3
-ARG TOOLCHAIN=stable 
+ARG SCCACHE_VERSION="0.7.3"
+ARG TOOLCHAIN="stable" 
 
 ENV CARGO_HOME="/usr/local/cargo"
 ENV RUSTUP_HOME="/usr/local/rustup"
@@ -152,10 +152,24 @@ RUN set -eux \
         x86_64-pc-windows-msvc \
         x86_64-unknown-linux-gnu \
         x86_64-unknown-linux-musl \
-    && cargo install cargo-xwin \
     && true 
+
+# install xwin
+COPY ./xwin-test /xwin-test
+RUN set -eux \
+    && echo "<image:xwin> fetching dependencies... " \
+    && cd /xwin-test \
+    && cargo install cargo-xwin \
+    && cargo xwin build --target=aarch64-pc-windows-msvc --release \
+    && cargo xwin build --target=x86_64-pc-windows-msvc --release \
+    && rm -rf /xwin-test \
+    && true
+
+# configure cargo
 COPY ./cargo/config.toml /.cargo/config.toml
-COPY rcodesign /usr/local/bin/rcodesign
+
+# install code signer
+COPY ./rcodesign /usr/local/bin/rcodesign
 
 WORKDIR /root/src 
 
